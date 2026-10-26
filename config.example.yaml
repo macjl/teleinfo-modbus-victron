@@ -1,0 +1,24 @@
+# Experimental monitoring only. These are deliberately explicit acknowledgments.
+source: simulated
+host: 127.0.0.1
+port: 1502
+meter_profile: abb_b21  # em24 remains available for existing deployments.
+abb_serial: 10000001  # Synthetic positive 32-bit numeric identity, stable per gateway.
+serial: TIC00000000001  # Used only with meter_profile: em24.
+allow_estimated_power: true
+power_method: adaptive  # TIC: learn from Wh, then correct VA (F1ATB-inspired).
+power_window_seconds: 60.0  # Target: 60 s OR 10 Wh, whichever comes first.
+power_window_wh: 10
+power_min_seconds: 15.0  # Both minimums remain mandatory, even beyond 60 s.
+power_min_wh: 2
+power_smoothing_seconds: 15.0  # Maximum tau; scales down with shorter windows.
+nominal_frequency: 50.0  # Configured Hz, not measured by TIC.
+stale_after: 5.0
+simulation_interval: 1.0
+simulation_power: 1234.5  # Positive import; negative export.
+metrics_enabled: false
+metrics_host: 127.0.0.1
+metrics_port: 9108
+log_level: INFO
+# Real Linky: source: tic, device: /dev/serial/by-id/<observed-adapter-id>
+# Serial format is fixed at 9600 7E1; no adapter path is guessed.

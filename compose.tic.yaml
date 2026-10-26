@@ -1,0 +1,11 @@
+# Requires TIC_DEVICE and TIC_DIALOUT_GID in a local .env file (see Debian docs).
+services:
+  bridge:
+    environment:
+      TIC_EM24_SOURCE: tic
+      TIC_EM24_DEVICE: /dev/tic
+      TIC_EM24_ALLOW_ESTIMATED_POWER: "true"
+    devices:
+      - "${TIC_DEVICE:?set TIC_DEVICE in .env}:/dev/tic"
+    group_add:
+      - "${TIC_DIALOUT_GID:?set TIC_DIALOUT_GID in .env}"

@@ -1,0 +1,17 @@
+services:
+  bridge:
+    build: .
+    image: teleinfo-modbus-victron:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${MODBUS_BIND:-127.0.0.1}:502:1502"
+    volumes:
+      - ./config.example.yaml:/app/config.yaml:ro
+    environment:
+      TIC_EM24_HOST: 0.0.0.0
+      TIC_EM24_METER_PROFILE: "${METER_PROFILE:-abb_b21}"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true

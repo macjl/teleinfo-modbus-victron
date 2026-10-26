@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/victronenergy/dbus-modbus-client",
+  "commit": "fe12d8c9c30fab4310e16c10bbec0ced4ca9926f",
+  "version": "1.83",
+  "audited_on": "2026-10-25",
+  "files": {
+    "abb.py": "91314527270b54f87e041f137c4de90760a828e4",
+    "carlo_gavazzi.py": "a8e605c5990a848e88f3a2f531330ee0fce5a7c5",
+    "register.py": "0bbef269419b4a2881de77ab2bbd1ce8b2073d56",
+    "probe.py": "45147476c0134262559a424901537f6f9c3bc5c6",
+    "scan.py": "770439bccf4d65587dc5b4d346835fd1773a488a",
+    "device.py": "e72f1139b059ee5f19e164f1305ff48df5a4aab3",
+    "client.py": "d184b729f9381963f5da6d3c0272befa3904bb0f",
+    "mdns.py": "d5652581380b00d8cdae8479c4bd0ee87f60d9ea",
+    "dbus-modbus-client.py": "aa32e8afad183a182b47e81aff4b518611d4da6a",
+    "devspec.py": "8080f7fdc0878154fc2efe1096ea9613cd4c345c",
+    "utils.py": "05d40f9fa43e2c9b6e8fac20ab70a83d66e79611",
+    "victron_em.py": "42b63cb1686cbe20faf1b5074c9301cdd85349cc",
+    "victron_p1link.py": "ce4301911f7dee0146edf57f6f82eee2e872b010"
+  }
+}

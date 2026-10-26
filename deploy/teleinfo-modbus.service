@@ -1,0 +1,22 @@
+[Unit]
+Description=Linky TIC to experimental ABB B21 / EM24 Modbus TCP server
+After=network.target
+
+[Service]
+Type=simple
+User=teleinfo
+Group=teleinfo
+SupplementaryGroups=dialout
+WorkingDirectory=/opt/teleinfo-modbus-victron
+ExecStart=/opt/teleinfo-modbus-victron/.venv/bin/teleinfo-modbus --config /etc/teleinfo-modbus.yaml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+services:
+  bridge:
+    environment:
+      TIC_EM24_METRICS_ENABLED: "true"
+      TIC_EM24_METRICS_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:9108:9108"

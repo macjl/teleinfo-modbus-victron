@@ -2,6 +2,13 @@
 
 `Source simulée ou lecteur TIC → normalisation → estimation adaptative TIC → instantané validé → serveur ABB B21 ou EM24/PyModbus`
 
+Le mode natif ajoute une autre sortie depuis le même modèle :
+`lecteur TIC USB sur GX → instantané validé → service D-Bus grid + chemins /Tic/…`.
+Le lecteur fonctionne hors de la boucle GLib ; seul le thread principal publie
+sur D-Bus, par lots cohérents toutes les 250 ms. `config.py` ne charge PyYAML
+que pour le mode Modbus ; le mode GX utilise JSON et les bibliothèques du firmware.
+Voir [l’installation D-Bus et son API](gx-dbus.md).
+
 ## Composants
 
 - `tic.py` : cadrage incrémental STX/ETX, abandon EOT, limite de 16 Kio,

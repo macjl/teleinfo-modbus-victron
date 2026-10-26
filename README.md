@@ -2,11 +2,19 @@
 
 [English documentation](README.en.md) · [Contribuer](CONTRIBUTING.md) · [Versions](CHANGELOG.md)
 
+Deux modes sont disponibles :
+
+- **D-Bus natif sur GX**, avec USB directement connecté au GX et données TIC
+  supplémentaires : [installation et champs publiés](docs/gx-dbus.md).
+- **Passerelle Modbus TCP sur Linux**, décrite ci-dessous ; la version
+  [v0.3.0a1](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
+  conserve le premier état publié.
+
 Passerelle Python open source : TIC standard d’un Linky monophasé vers un
 **serveur Modbus TCP** émulant un **ABB B21**, ou un EM24 Ethernet en option.
 **Le GX est le client Modbus.** Aucun pilote supplémentaire sur GX, aucun MQTT.
 
-Version expérimentale **0.3.0a1**, destinée au monitoring. Serveur simulé,
+Version expérimentale **0.4.0a1**, destinée au monitoring. Serveur simulé,
 lecteur USB, checksum, cohérence, expiration, reconnexion, YAML/environnement,
 Docker et Prometheus facultatif sont implémentés. Les requêtes de découverte,
 d’initialisation et de lecture d’un GX réel (Raspberry Pi 4, Venus OS 3.85)
@@ -120,7 +128,8 @@ Voir les audits [ABB B21](docs/victron-abb-b21-audit.md) et [EM24](docs/victron-
 et l’[inventaire initial](docs/environment.md). La qualification ESS nécessitera
 une mesure active fiable de référence et des essais de latence et de défaut.
 
-Une intégration D-Bus directe sur GX est envisagée ; elle n’est pas implémentée
-dans cette version. Voir [les pistes d’évolution](CONTRIBUTING.md).
+Le mode D-Bus réutilise le lecteur et l’estimateur sans charger les bibliothèques
+Modbus/YAML. Ses champs supplémentaires ne deviennent pas automatiquement
+des graphiques VRM. Voir [le guide D-Bus](docs/gx-dbus.md).
 
 Licence MIT. Projet indépendant de Victron Energy, ABB, Carlo Gavazzi et Enedis.

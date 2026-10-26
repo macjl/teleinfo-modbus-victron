@@ -15,3 +15,4 @@ config.yaml
 *.local.yaml
 *.local.md
 *.local.json
+*.local.*

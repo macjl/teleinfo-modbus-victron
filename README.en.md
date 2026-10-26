@@ -9,7 +9,12 @@ or, optionally, a Carlo Gavazzi EM24 Ethernet.
 **The Victron GX is the Modbus client.** No custom driver needs to be installed
 on Venus OS. MQTT is not required.
 
-Version **0.3.0a1** is an experimental monitoring release. Native discovery
+Version **0.4.0a1** adds a native GX D-Bus driver. It reads USB directly on GX,
+publishes native grid readings and separate custom TIC contract/tariff paths.
+See the [D-Bus installation guide, in French](docs/gx-dbus.md). Custom paths
+are not automatically displayed or archived by GX/VRM. The original
+[v0.3.0a1 Modbus release](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
+remains available. Both modes are experimental monitoring integrations. Native discovery
 and displayed readings have been confirmed on a Raspberry Pi 4 running
 **Venus OS 3.85**, first with EM24 and then with ABB B21. The ABB profile also
 displays reverse energy on L1. This is validation on one installation, not
@@ -84,8 +89,8 @@ reconnection, Docker may require `up -d --force-recreate` with the same files.
 
 Required fields are `VTIC=02`, `URMS1`, `IRMS1`, `SINSTS`, `SINSTI`, `EAST`
 and `EAIT`. A missing injection field is not silently replaced with zero.
-Historical TIC mode, three-phase meters and direct GX D-Bus publishing are
-not implemented in this version.
+Historical TIC mode and three-phase meters are not implemented. Direct GX
+D-Bus publishing uses the separate installer and JSON configuration, not Compose.
 
 For native Python deployment, copy the example to `config.local.yaml`, set
 `source: tic`, `device`, `host` and `port`, and use the same CLI. A sample
@@ -114,7 +119,7 @@ and disabled by default. `.env` and `*.local.*` files are excluded from Git.
 .venv/bin/python tools/check_upstream.py
 ```
 
-The 58 tests cover both wire maps, TCP operations, parsing, freshness,
+The 66 tests cover both wire maps, TCP operations, parsing, freshness,
 reconnection, estimation and metrics. The upstream audit verifies pinned
 Victron sources and official register decoders; it needs internet access
 unless `--source-dir` points to a matching local checkout.

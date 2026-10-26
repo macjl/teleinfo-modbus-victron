@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "teleinfo-modbus-victron"
-version = "0.3.0a1"
-description = "Linky standard TIC to experimental ABB B21 and EM24 Modbus TCP interfaces"
+version = "0.4.0a1"
+description = "Linky standard TIC to Victron GX via Modbus TCP or native D-Bus"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -26,6 +26,7 @@ Issues = "https://github.com/macjl/teleinfo-modbus-victron/issues"
 
 [project.scripts]
 teleinfo-modbus = "teleinfo_modbus_victron.app:main"
+teleinfo-dbus = "teleinfo_modbus_victron.dbus_app:main"
 
 [tool.setuptools.packages.find]
 include = ["teleinfo_modbus_victron*"]

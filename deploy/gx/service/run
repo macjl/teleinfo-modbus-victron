@@ -1,0 +1,4 @@
+#!/bin/sh
+exec 2>&1
+cd /data/dbus-linky-tic/app || exit 1
+exec python3 -u -m teleinfo_modbus_victron.dbus_app --config /data/dbus-linky-tic/config.json

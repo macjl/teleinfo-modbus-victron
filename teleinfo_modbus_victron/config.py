@@ -4,7 +4,6 @@ import math
 import os
 from pathlib import Path
 
-import yaml
 
 from .em24 import encode_serial
 from .abb_b21 import encode_serial as encode_abb_serial
@@ -92,6 +91,8 @@ class Config:
 
 
 def load_config(path: str | Path | None = None, environ=None) -> Config:
+    import yaml  # Modbus YAML configuration is optional for the native GX runtime.
+
     data = {}
     if path:
         with open(path, encoding="utf-8") as stream:

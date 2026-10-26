@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0a1 — 2026-10-26
+
+- Native Venus OS D-Bus grid meter with direct TIC USB acquisition.
+- Exact 1 Wh energy steps in native Total/L1 paths, with no meter emulation.
+- Separate custom TIC contract, tariff, energy, status and historical data paths.
+- Persistent GX installation, firmware-provided libraries, adapter-specific
+  serial ownership, bounded logs, and explicit invalidation of expired data.
+- Existing Modbus profiles and adaptive estimator retained; 66 automated tests.
+- Active power remains estimated; ESS is still unqualified.
+
 ## 0.3.0a1 — 2026-10-26
 
 First public release of the current monitoring gateway.

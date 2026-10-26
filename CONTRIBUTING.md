@@ -36,14 +36,13 @@ unredacted local configuration. Use synthetic TIC fixtures for tests.
 
 ## Évolutions envisagées / Possible next steps
 
-- Direct D-Bus publishing on GX, with a Linky identity and native grid paths.
-- Extra TIC contract and tariff data for automation, keeping custom paths
-  distinct from fields natively displayed by GX and recorded by VRM.
+- Node-RED examples using the implemented custom TIC D-Bus paths.
+- Native GX/VRM presentation and historical recording of additional TIC fields.
 - End-to-end USB/network fault timing and GX reboot validation.
 - Synchronized comparisons with reliable active-power measurements.
 - More hardware and Venus OS version reports.
 
-These items are not implemented or qualified by the current release. D-Bus
+These remaining items are not implemented or qualified by the current release. D-Bus
 publishing will not remove the underlying TIC active-power limitation.
 Historical TIC mode and three-phase support would need separate requirements
 and tests; the current parser/model must not be presented as supporting them.

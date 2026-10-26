@@ -1,0 +1,17 @@
+{
+  "device": "/dev/serial/by-id/REPLACE_WITH_OBSERVED_ADAPTER_ID",
+  "instance": 43,
+  "identity": "linky_tic",
+  "serial": "LINKYTIC000001",
+  "custom_name": "Linky TIC — estimation",
+  "claim_serial": true,
+  "measurement": {
+    "stale_after": 5.0,
+    "power_method": "adaptive",
+    "power_window_seconds": 60.0,
+    "power_window_wh": 10,
+    "power_min_seconds": 15.0,
+    "power_min_wh": 2,
+    "power_smoothing_seconds": 15.0
+  }
+}

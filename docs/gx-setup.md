@@ -1,5 +1,8 @@
 # Réglages Victron GX
 
+Ce guide concerne la passerelle Modbus sur un hôte Linux séparé.
+Pour un USB directement connecté au GX, voir [le pilote natif D-Bus](gx-dbus.md).
+
 Le GX est **client Modbus TCP** ; la passerelle Linux est **serveur**.
 Aucun paquet, script ou pilote personnalisé n’est à installer dans Venus OS.
 

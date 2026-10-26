@@ -1,5 +1,41 @@
 # Validation de la passerelle et de Venus OS
 
+## Pilote D-Bus natif 0.4.0a1
+
+Le 26 octobre 2026, le pilote a été installé sur le même Raspberry Pi 4 sous
+Venus OS 3.85, avec l’USB TIC directement connecté au GX. Le firmware fournit
+Python 3.12, pyserial, D-Bus, GLib et sa bibliothèque `velib_python` ; aucun
+paquet système supplémentaire n’a été installé.
+
+Les preuves acquises pour cette installation sont :
+
+- service `com.victronenergy.grid.linky_tic` enregistré, instance distincte 43 ;
+- trames réelles reçues, 46 groupes conservés hors ADSC/PRM ;
+- état `tracking`, tension/courant et W estimés disponibles ;
+- index Total/L1 identiques dans chaque sens, sans quantification Modbus ;
+- reprise de la puissance réseau dans `com.victronenergy.system` et type générique 0 ;
+- champs de contrat, période tarifaire et puissance de référence/coupure lisibles ;
+- refus d’une écriture de puissance par un client D-Bus ;
+- un seul processus propriétaire du port USB, règle udev ciblée `VE_SERVICE=ignore` ;
+- essai avec source absente : `/Connected=0` et mesures natives/supplémentaires invalides ;
+- restauration du chemin USB réel et reprise de l’estimation environ 28 s après
+  redémarrage du service, avec identité et nom conservés ;
+- restauration idempotente des liens du service et de la règle de démarrage.
+
+Un essai supplémentaire sur **un bus D-Bus isolé du bus système**, utilisant
+la bibliothèque du GX et notre modèle, a vérifié l’expiration réelle des
+valeurs exportées vers le marqueur D-Bus invalide, ainsi que les pas de 1 Wh.
+Aucun compteur synthétique n’a été publié sur le bus de production pour cet essai.
+Les **66 tests automatisés** passent sur l’environnement de développement.
+
+Le pilote natif est le seul service `grid` actif après migration. L’ancien
+conteneur Modbus a été arrêté ; le code et la version `v0.3.0a1` restent disponibles.
+La confirmation visuelle de l’interface GX, l’archivage VRM, le redémarrage complet
+du GX et un cycle physique de débranchement USB restent à vérifier. Node-RED
+n’a pas été activé ni configuré par cette installation. L’ESS reste non qualifié.
+
+## Historique : passerelle Modbus 0.3.0a1
+
 État au **26 octobre 2026**, version **0.3.0a1** : passerelle de monitoring
 implémentée et déployée, avec TIC USB réelle et serveur Modbus TCP.
 **La découverte native EM24 initiale, puis celle de l’ABB B21 avec

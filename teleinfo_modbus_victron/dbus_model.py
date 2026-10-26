@@ -6,7 +6,7 @@ import re
 
 from .config import Config
 
-VERSION = "0.4.0a2"
+VERSION = "0.4.0a3"
 
 
 @dataclass(frozen=True)
@@ -18,6 +18,7 @@ class DBusConfig:
     custom_name: str = "Linky TIC — estimation"
     claim_serial: bool = True
     warmup_fallback: bool = True
+    powerguard_from_cutoff: bool = True
     velib_path: str = ""  # Empty: locate the firmware-provided library.
     measurement: dict = field(default_factory=dict)
 
@@ -33,8 +34,9 @@ class DBusConfig:
         if not isinstance(self.custom_name, str) or not 1 <= len(self.custom_name) <= 80:
             raise ValueError('invalid custom_name')
         if (type(self.claim_serial) is not bool or type(self.warmup_fallback) is not bool
+                or type(self.powerguard_from_cutoff) is not bool
                 or not isinstance(self.velib_path, str)):
-            raise ValueError('invalid claim_serial, warmup_fallback or velib_path')
+            raise ValueError('invalid claim_serial, warmup_fallback, powerguard_from_cutoff or velib_path')
         if not isinstance(self.measurement, dict):
             raise ValueError('measurement must be an object')
         allowed = {'stale_after', 'reconnect_max', 'max_voltage', 'max_current',
@@ -140,6 +142,9 @@ NATIVE_PATHS = ('/Ac/Power', '/Ac/L1/Power', '/Ac/L1/Voltage', '/Ac/L1/Current',
                 '/Ac/Energy/Forward', '/Ac/L1/Energy/Forward',
                 '/Ac/Energy/Reverse', '/Ac/L1/Energy/Reverse',
                 '/Ac/Frequency', '/Ac/PowerFactor', '/Ac/L1/PowerFactor')
+POWERGUARD_PATHS = ('/PowerGuard/Consumption/Active',
+                    '/PowerGuard/Consumption/Ac/Power',
+                    '/PowerGuard/Consumption/Ac/L1/Current')
 CUSTOM_MEASUREMENTS = ('/Tic/Power/ApparentImportVA', '/Tic/Power/ApparentExportVA',
                        '/Tic/Status/OverReferencePower', '/Tic/Status/Overvoltage',
                        '/Tic/Status/DryContactClosed', '/Tic/Raw',
@@ -159,10 +164,12 @@ def _extra(group, kind, scale):
     return int(value) * scale if value.isascii() and value.isdecimal() else None
 
 
-def render(store, power_fallback=None):
+def render(store, power_fallback=None, powerguard_from_cutoff=True):
     """One immutable, fresh snapshot per update; no cached physical values."""
     snapshot = store.fresh()
-    result = {path: None for path in (*NATIVE_PATHS, *CUSTOM_MEASUREMENTS, *EXTRA_FIELDS)}
+    result = {path: None for path in (*NATIVE_PATHS, *POWERGUARD_PATHS,
+                                     *CUSTOM_MEASUREMENTS, *EXTRA_FIELDS)}
+    result['/PowerGuard/Consumption/Active'] = 0
     result.update({path + '/Timestamp': None for path in EXTRA_FIELDS})
     result.update({'/Connected': int(snapshot is not None),
                    '/Tic/Status/SourceValid': int(snapshot is not None),
@@ -199,6 +206,15 @@ def render(store, power_fallback=None):
         group = snapshot.extras.get(label)
         result[path] = _extra(group, kind, scale)
         result[path + '/Timestamp'] = group.timestamp if group and result[path] is not None else None
+    cutoff = result['/Tic/Contract/CutoffPowerVA']
+    if (powerguard_from_cutoff and cutoff is not None
+            and 0 < cutoff <= store.config.max_apparent_power and snapshot.voltage > 0):
+        # Single phase: S = U_rms * I_rms. The W ceiling follows P <= S;
+        # only the current constraint also accounts for non-unity power factor.
+        # Never apply an estimated power factor, historical maximum, or 230 V.
+        result.update({'/PowerGuard/Consumption/Active': 1,
+                       '/PowerGuard/Consumption/Ac/Power': float(cutoff),
+                       '/PowerGuard/Consumption/Ac/L1/Current': cutoff / snapshot.voltage})
     status = result['/Tic/Status/Register']
     if status is not None:
         result['/Tic/Status/OverReferencePower'] = int(bool(status & (1 << 7)))

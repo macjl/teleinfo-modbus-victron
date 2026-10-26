@@ -6,6 +6,7 @@
   "custom_name": "Linky TIC — estimation",
   "claim_serial": true,
   "warmup_fallback": true,
+  "powerguard_from_cutoff": true,
   "measurement": {
     "stale_after": 5.0,
     "power_method": "adaptive",

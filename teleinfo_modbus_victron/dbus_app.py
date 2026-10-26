@@ -86,6 +86,8 @@ def run(config):
     source_config = config.source_config()
     store = MeasurementStore(source_config)
     power_fallback = PowerFallback(enabled=config.warmup_fallback)
+    def rendered_values():
+        return render(store, power_fallback, config.powerguard_from_cutoff)
     service = None
     failure = None
     settings_root = '/Settings/Devices/' + config.identity
@@ -140,7 +142,7 @@ def run(config):
     for path, value in identity.items():
         callback = rename if path == '/CustomName' else change_instance if path == '/DeviceInstance' else None
         service.add_path(path, value, writeable=callback is not None, onchangecallback=callback)
-    for path, value in render(store, power_fallback).items():
+    for path, value in rendered_values().items():
         service.add_path(path, value)
     service.register()  # Identity and all data paths exist before publishing the name.
     worker = SourceWorker(source_config, store,
@@ -155,7 +157,7 @@ def run(config):
                 raise RuntimeError('serial worker failed') from worker.failure
             if not worker.thread.is_alive():
                 raise RuntimeError('serial worker stopped unexpectedly')
-            values = render(store, power_fallback)
+            values = rendered_values()
             key = (store.accepted, store.rejected, values['/Connected'], values['/Tic/Status/PowerValid'])
             with service as batch:
                 for path, value in values.items():
@@ -187,7 +189,7 @@ def run(config):
     finally:
         store.invalidate('service stopping')
         with service as batch:
-            for path, value in render(store, power_fallback).items():
+            for path, value in rendered_values().items():
                 batch[path] = value
         worker.stop()
     if failure:

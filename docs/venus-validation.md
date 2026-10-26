@@ -1,5 +1,38 @@
 # Validation de la passerelle et de Venus OS
 
+## Limites PowerGuard D-Bus 0.4.0a3
+
+Le 26 octobre 2026, la version 0.4.0a3 a été installée sur le GX de référence
+(Venus OS 3.85). La configuration, l’identité et l’instance 43 ont été conservées.
+Le service a repris les trames réelles puis l’estimation `tracking`.
+
+Les **74 tests automatisés** passent. Les nouveaux cas couvrent le changement
+de tension et de `PCOUP`, l’import/export, l’indépendance vis-à-vis de
+l’apprentissage actif, les valeurs absentes/mal formées/hors limite, la tension
+nulle, la désactivation configurable et l’expiration/rejet/déconnexion.
+
+Un essai sur un **bus D-Bus isolé** du GX, avec sa bibliothèque réelle,
+a vérifié :
+
+- 9 kVA sous 232 V → 38,7931 A, puis sous 225 V → 40 A ;
+- changement de contrat à 6 kVA sous 240 V → 25 A et plafond total de 6 000 W ;
+- émission des notifications `ItemsChanged` lors du changement de courant ;
+- refus des écritures sur les trois chemins dérivés ;
+- `PCOUP` absent puis données expirées → limites invalides et `Active=0`.
+
+Sur la TIC réelle, un relevé de **30 s** a compté **72 observations fraîches**,
+avec `PCOUP=9 kVA`, `URMS1=232 V`, plafond total **9 000 W** et limite L1
+**38,7931 A**, ainsi que `Active=1`. Toutes ces observations respectaient la
+formule et disposaient d’une puissance publiée. La puissance réseau native
+restait disponible dans `com.victronenergy.system`. La tension n’a pas changé
+pendant ce relevé ; sa variation a été testée sur le bus isolé.
+
+Le plafond en watts est une borne `P ≤ S`, pas une conversion exacte des VA
+en watts. Le courant RMS par phase exprime la contrainte apparente en monophasé.
+**La prise en compte automatique de ces chemins par EVCS, la limitation réelle
+de la charge et son comportement à la perte TIC restent non vérifiés.** Aucun
+réglage de la borne ni des autres services Victron n’a été changé.
+
 ## Repli provisoire D-Bus 0.4.0a2
 
 La version 0.4.0a2 ajoute un repli configurable pendant l’apprentissage :

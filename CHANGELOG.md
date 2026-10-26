@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0a3 — 2026-10-26
+
+- Native D-Bus PowerGuard consumption limits derived from current-frame PCOUP:
+  total active-power ceiling and single-phase RMS current using measured URMS1.
+- Dynamic voltage/contract updates, read-only paths, invalid limits and inactive
+  flag on missing, rejected or expired inputs; configurable publication.
+- The W ceiling alone does not enforce a VA limit. Native EVCS forwarding and
+  actual charge limitation remain unverified; no EVCS settings are changed.
+- 74 automated tests, including changing voltage/contract, import/export,
+  missing/malformed inputs, zero voltage, disabled publication and source faults.
+
 ## 0.4.0a2 — 2026-10-26
 
 - Native D-Bus provisional power during initial/reversal warm-up: reuse the last

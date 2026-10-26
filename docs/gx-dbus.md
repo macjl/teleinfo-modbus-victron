@@ -55,6 +55,51 @@ Les champs natifs `/Ac/PowerFactor` restent invalides. Régler
 `warmup_fallback: false` pour conserver des watts indisponibles pendant l’apprentissage.
 Le comportement des profils Modbus reste inchangé.
 
+## Limites PowerGuard issues du contrat
+
+Avec `powerguard_from_cutoff: true` (défaut), le pilote publie des limites de
+**consommation réseau**, calculées depuis `PCOUP` dans la trame courante :
+
+| Chemin | Valeur en monophasé |
+| --- | --- |
+| `/PowerGuard/Consumption/Active` | 1 si les limites sont disponibles |
+| `/PowerGuard/Consumption/Ac/Power` | Plafond théorique actif en W : `PCOUP × 1000` |
+| `/PowerGuard/Consumption/Ac/L1/Current` | Plafond RMS en A : `PCOUP × 1000 / URMS1` |
+
+`PCOUP` est transmis en kVA. Le plafond total en W découle de `P ≤ S` : il
+ne signifie pas que les VA sont une mesure de watts. **Ce plafond actif seul
+ne suffit pas à respecter la limite apparente** lorsque le facteur de puissance
+est inférieur à 1. Le courant L1 représente la contrainte apparente en monophasé,
+indépendamment de notre estimation de puissance active. Il s’agit du courant
+réseau global admissible, pas d’une consigne de courant pour la borne.
+
+La tension utilisée est **`URMS1` mesurée dans la même trame**, sans constante
+230 V, moyenne historique ni facteur W/VA appris. À 9 kVA : 38,79 A sous 232 V,
+40 A sous 225 V. La valeur est recalculée à chaque trame ; les changements sont
+publiés par les notifications D-Bus habituelles, au prochain rafraîchissement
+de 250 ms. Un changement de `PCOUP` est pris en compte de la même manière.
+La fréquence effective dépend de la réception des trames TIC.
+
+Les limites sont en lecture seule, dérivées de la TIC. Si la source est absente,
+rejetée ou périmée, si `PCOUP` est absent, mal formé, nul ou supérieur au contrôle
+de cohérence `max_apparent_power`, ou si la tension est nulle : `Active=0` et
+les deux limites sont invalides. Aucune ancienne valeur n’est conservée.
+`powerguard_from_cutoff: false` désactive cette publication (limites invalides,
+`Active=0`) tout en conservant `/Tic/Contract/CutoffPowerVA`.
+Ni `PREF` ni les maxima historiques `SMAXSN` ne remplacent `PCOUP`.
+
+Le pilote est **monophasé** : aucune limite L2/L3 ou de production n’est inventée.
+Une adaptation triphasée nécessiterait un modèle et des mesures par phase ;
+la puissance totale ne permet pas de déduire une allocation universelle.
+
+Ces chemins correspondent au [schéma de l’interface Victron](https://github.com/victronenergy/gui-v2/blob/a9a17db6185a77944acfb643d08d868968b533d5/pages/settings/devicelist/ac-in/PowerGuardConsumptionSettings.qml).
+L’existence de ces chemins et leur mise à jour ne prouvent pas qu’un régulateur
+les utilise. **La transmission native de cette limite depuis le compteur réseau
+à une borne EVCS et la réduction effective de la charge restent à vérifier.**
+Le pilote ne commande pas la borne et n’active aucun régulateur GX.
+Un consommateur de ces limites doit gérer leur invalidité ; `Active=0` à la
+perte de la TIC ne garantit pas l’arrêt de la charge.
+
 Les chemins suivants constituent **notre API supplémentaire**, schéma 1,
 pas des champs natifs automatiquement affichés ou archivés par GX/VRM :
 

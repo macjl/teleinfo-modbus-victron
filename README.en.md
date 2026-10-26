@@ -9,10 +9,12 @@ or, optionally, a Carlo Gavazzi EM24 Ethernet.
 **The Victron GX is the Modbus client.** No custom driver needs to be installed
 on Venus OS. MQTT is not required.
 
-Version **0.4.0a2** adds a native GX D-Bus driver. It reads USB directly on GX,
+Version **0.4.0a3** includes a native GX D-Bus driver. It reads USB directly on GX,
 publishes native grid readings and separate custom TIC contract/tariff paths.
-See the [D-Bus installation guide, in French](docs/gx-dbus.md). Custom paths
-are not automatically displayed or archived by GX/VRM. The original
+See the [D-Bus installation guide, in French](docs/gx-dbus.md). PowerGuard
+consumption limits use PCOUP and live voltage; native forwarding to EVCS and
+actual charge limitation remain unverified. Custom TIC paths are not
+automatically displayed or archived by GX/VRM. The original
 [v0.3.0a1 Modbus release](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
 remains available. Both modes are experimental monitoring integrations. Native discovery
 and displayed readings have been confirmed on a Raspberry Pi 4 running

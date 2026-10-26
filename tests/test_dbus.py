@@ -11,7 +11,7 @@ import unittest
 
 from teleinfo_modbus_victron.config import Config
 from teleinfo_modbus_victron.dbus_app import SourceWorker
-from teleinfo_modbus_victron.dbus_model import DBusConfig, EXTRA_FIELDS, NATIVE_PATHS, PowerFallback, load_dbus_config, render
+from teleinfo_modbus_victron.dbus_model import DBusConfig, EXTRA_FIELDS, NATIVE_PATHS, POWERGUARD_PATHS, PowerFallback, load_dbus_config, render
 from teleinfo_modbus_victron.model import MeasurementStore, normalize
 from teleinfo_modbus_victron.tic import Group, parse_frame
 from tests.helpers import frame, snapshot
@@ -104,6 +104,73 @@ class DBusModelTests(unittest.TestCase):
         self.assertEqual(values['/Tic/Status/PowerValid'], 0)
         self.assertIsNone(values['/Ac/Power'])
         self.assertIsNotNone(values['/Ac/Energy/Forward'])
+
+    def test_powerguard_tracks_live_voltage_and_contract_in_both_directions(self):
+        for voltage, cutoff, power in ((232, '09', 700), (225, '09', -500),
+                                       (240, '06', 0)):
+            with self.subTest(voltage=voltage, cutoff=cutoff, power=power):
+                self.now += 1
+                self.store.publish(replace(snapshot(self.now, power=power), voltage=voltage,
+                                          extras=MappingProxyType({'PCOUP': Group(cutoff)})))
+                values = render(self.store)
+                self.assertEqual(values['/PowerGuard/Consumption/Active'], 1)
+                self.assertEqual(values['/PowerGuard/Consumption/Ac/Power'], int(cutoff) * 1000)
+                self.assertAlmostEqual(values['/PowerGuard/Consumption/Ac/L1/Current'],
+                                       int(cutoff) * 1000 / voltage)
+                self.assertNotIn('/PowerGuard/Consumption/Ac/L2/Current', values)
+                self.assertNotIn('/PowerGuard/Consumption/Ac/L3/Current', values)
+                self.assertNotIn('/PowerGuard/Production/Active', values)
+
+    def test_powerguard_needs_current_cutoff_and_voltage_and_can_be_disabled(self):
+        cases = ({}, {'PCOUP': Group('bad')}, {'PCOUP': Group('00')},
+                 {'PCOUP': Group('99')}, {'PCOUP': Group('-1')},
+                 {'PREF': Group('09'), 'SMAXSN': Group('07354')})
+        for extras in cases:
+            with self.subTest(extras=extras):
+                self.now += 1
+                self.store.publish(replace(snapshot(self.now),
+                                          extras=MappingProxyType({'PCOUP': Group('09')})))
+                self.assertEqual(render(self.store)['/PowerGuard/Consumption/Active'], 1)
+                self.store.publish(replace(snapshot(self.now), extras=MappingProxyType(extras)))
+                values = render(self.store)
+                self.assertEqual(values['/PowerGuard/Consumption/Active'], 0)
+                for path in POWERGUARD_PATHS[1:]:
+                    self.assertIsNone(values[path])
+        self.store.publish(replace(snapshot(self.now, power=0), voltage=0,
+                                  extras=MappingProxyType({'PCOUP': Group('09')})))
+        self.assertEqual(render(self.store)['/PowerGuard/Consumption/Active'], 0)
+        self.store.publish(replace(snapshot(self.now), extras=MappingProxyType({'PCOUP': Group('09')})))
+        disabled = render(self.store, powerguard_from_cutoff=False)
+        self.assertEqual(disabled['/PowerGuard/Consumption/Active'], 0)
+        self.assertIsNone(disabled['/PowerGuard/Consumption/Ac/L1/Current'])
+        self.assertIsNone(disabled['/PowerGuard/Consumption/Ac/Power'])
+        self.assertEqual(disabled['/Tic/Contract/CutoffPowerVA'], 9000)
+
+    def test_powerguard_limits_clear_on_source_expiry_rejection_and_disconnect(self):
+        for fault in ('expiry', 'checksum', 'disconnect'):
+            with self.subTest(fault=fault):
+                self.store.publish(replace(snapshot(self.now),
+                                          extras=MappingProxyType({'PCOUP': Group('09')})))
+                self.assertEqual(render(self.store)['/PowerGuard/Consumption/Active'], 1)
+                if fault == 'expiry':
+                    self.now += self.config.stale_after
+                elif fault == 'checksum':
+                    self.store.reject('invalid TIC frame/checksum')
+                else:
+                    self.store.invalidate('serial disconnected')
+                values = render(self.store)
+                self.assertEqual(values['/PowerGuard/Consumption/Active'], 0)
+                for path in POWERGUARD_PATHS[1:]:
+                    self.assertIsNone(values[path])
+
+    def test_powerguard_does_not_depend_on_active_power_learning_or_fallback(self):
+        trace = Trace()
+        source = replace(snapshot(trace.now), extras=MappingProxyType({'PCOUP': Group('09')}))
+        trace.store.publish(source)
+        values = render(trace.store)
+        self.assertIsNone(values['/Ac/Power'])
+        self.assertEqual(values['/PowerGuard/Consumption/Active'], 1)
+        self.assertAlmostEqual(values['/PowerGuard/Consumption/Ac/L1/Current'], 9000 / source.voltage)
 
     def test_reversals_publish_unity_then_cached_factors_per_direction(self):
         trace = Trace()
@@ -206,8 +273,10 @@ class DBusConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg.source_config().power_min_wh, 2)
         self.assertEqual(cfg.source_config().power_min_seconds, 15)
         self.assertTrue(cfg.warmup_fallback)
+        self.assertTrue(cfg.powerguard_from_cutoff)
         for changes in ({'identity': 'bad/name'}, {'instance': True}, {'instance': 1000},
                         {'device': 'ttyUSB0'}, {'claim_serial': 'true'}, {'warmup_fallback': 'true'},
+                        {'powerguard_from_cutoff': 'true'}, {'powerguard_from_cutoff': 1},
                         {'measurement': {'port': 502}}, {'measurement': {'stale_after': 0}}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 DBusConfig(**({'device': '/dev/test'} | changes))

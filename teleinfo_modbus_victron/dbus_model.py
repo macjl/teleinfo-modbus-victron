@@ -6,7 +6,7 @@ import re
 
 from .config import Config
 
-VERSION = "0.4.0a1"
+VERSION = "0.4.0a2"
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class DBusConfig:
     serial: str = "LINKYTIC000001"  # Synthetic, never the Linky ADSC/PRM.
     custom_name: str = "Linky TIC — estimation"
     claim_serial: bool = True
+    warmup_fallback: bool = True
     velib_path: str = ""  # Empty: locate the firmware-provided library.
     measurement: dict = field(default_factory=dict)
 
@@ -31,8 +32,9 @@ class DBusConfig:
             raise ValueError('serial must be a synthetic identifier of at most 48 characters')
         if not isinstance(self.custom_name, str) or not 1 <= len(self.custom_name) <= 80:
             raise ValueError('invalid custom_name')
-        if type(self.claim_serial) is not bool or not isinstance(self.velib_path, str):
-            raise ValueError('invalid claim_serial or velib_path')
+        if (type(self.claim_serial) is not bool or type(self.warmup_fallback) is not bool
+                or not isinstance(self.velib_path, str)):
+            raise ValueError('invalid claim_serial, warmup_fallback or velib_path')
         if not isinstance(self.measurement, dict):
             raise ValueError('measurement must be an object')
         allowed = {'stale_after', 'reconnect_max', 'max_voltage', 'max_current',
@@ -50,6 +52,46 @@ class DBusConfig:
     def source_config(self):
         return Config(source='tic', device=self.device, allow_estimated_power=True,
                       meter_profile='abb_b21', **self.measurement)
+
+
+@dataclass(frozen=True)
+class PublishedPower:
+    watts: float | None
+    factor: float | None
+    state: str
+    provisional: bool = False
+    factor_source: str = 'unavailable'
+
+
+class PowerFallback:
+    """Per-process, per-direction learned coefficients; never cached W readings.
+
+    The underlying estimator keeps relearning independently. Fresh TIC is
+    checked by render() before this policy can use a cached factor on new VA.
+    """
+    def __init__(self, enabled=True):
+        self.enabled = enabled
+        self.learned_factors = {}
+
+    def select(self, snapshot):
+        estimate = snapshot.power_estimate
+        direction = 1 if snapshot.apparent_import else -1 if snapshot.apparent_export else 0
+        if (direction and estimate is not None and estimate.state == 'tracking'
+                and estimate.factor is not None and 0 <= estimate.factor <= 1):
+            # energy_limited.factor is an effective bound, not the learned
+            # coefficient. Neither this bound nor a fallback may teach the cache.
+            self.learned_factors[direction] = estimate.factor
+        if (self.enabled and direction and estimate is not None
+                and estimate.state == 'warming_up' and estimate.watts is None):
+            cached = direction in self.learned_factors
+            factor = self.learned_factors.get(direction, 1.0)
+            source = 'cached' if cached else 'unity'
+            return PublishedPower((snapshot.apparent_import - snapshot.apparent_export) * factor,
+                                  factor, 'warming_up_' + source, True, source)
+        if estimate is not None:
+            source = ('learned' if estimate.state == 'tracking' else estimate.state)
+            return PublishedPower(estimate.watts, estimate.factor, estimate.state, factor_source=source)
+        return PublishedPower(snapshot.estimated_power, None, 'apparent', factor_source='apparent')
 
 
 def load_dbus_config(path):
@@ -101,7 +143,7 @@ NATIVE_PATHS = ('/Ac/Power', '/Ac/L1/Power', '/Ac/L1/Voltage', '/Ac/L1/Current',
 CUSTOM_MEASUREMENTS = ('/Tic/Power/ApparentImportVA', '/Tic/Power/ApparentExportVA',
                        '/Tic/Status/OverReferencePower', '/Tic/Status/Overvoltage',
                        '/Tic/Status/DryContactClosed', '/Tic/Raw',
-                       '/Tic/Estimator/Factor', '/Tic/Estimator/EnergyMeanW',
+                       '/Tic/Estimator/Factor', '/Tic/Estimator/FactorSource', '/Tic/Estimator/EnergyMeanW',
                        '/Tic/Estimator/WindowSeconds', '/Tic/Estimator/WindowWh',
                        '/Tic/Estimator/SmoothingSeconds', '/Tic/Estimator/CalibrationAgeSeconds')
 
@@ -117,21 +159,30 @@ def _extra(group, kind, scale):
     return int(value) * scale if value.isascii() and value.isdecimal() else None
 
 
-def render(store):
+def render(store, power_fallback=None):
     """One immutable, fresh snapshot per update; no cached physical values."""
     snapshot = store.fresh()
     result = {path: None for path in (*NATIVE_PATHS, *CUSTOM_MEASUREMENTS, *EXTRA_FIELDS)}
     result.update({path + '/Timestamp': None for path in EXTRA_FIELDS})
     result.update({'/Connected': int(snapshot is not None),
                    '/Tic/Status/SourceValid': int(snapshot is not None),
-                   '/Tic/Status/PowerValid': int(snapshot is not None and snapshot.estimated_power is not None),
+                   '/Tic/Status/PowerValid': 0,
+                   '/Tic/Status/PowerProvisional': 0,
+                   '/Tic/Status/PowerCalibrated': 0,
                    '/Tic/Status/SourceAgeSeconds': store.age(),
                    '/Tic/Status/ReceivedUtc': None,
                    '/Tic/Status/State': 'unavailable',
                    '/Tic/Status/Reason': store.reason if snapshot else ('expired' if store.reason == 'valid' else store.reason)})
     if snapshot is None:
         return result
-    power = snapshot.estimated_power
+    published = (power_fallback or PowerFallback(enabled=False)).select(snapshot)
+    power = published.watts
+    result['/Tic/Status/PowerValid'] = int(power is not None)
+    result['/Tic/Status/PowerProvisional'] = int(published.provisional)
+    result['/Tic/Status/PowerCalibrated'] = int(
+        not published.provisional and snapshot.power_estimate is not None
+        and snapshot.power_estimate.factor is not None)
+    result['/Tic/Estimator/FactorSource'] = published.factor_source
     result.update({'/Ac/Power': power, '/Ac/L1/Power': power,
                    '/Ac/L1/Voltage': float(snapshot.voltage), '/Ac/L1/Current': float(snapshot.current),
                    '/Ac/Energy/Forward': snapshot.energy_import_wh / 1000,
@@ -154,9 +205,9 @@ def render(store):
         result['/Tic/Status/Overvoltage'] = int(bool(status & (1 << 6)))
         result['/Tic/Status/DryContactClosed'] = int(not status & 1)
     estimate = snapshot.power_estimate
-    result['/Tic/Status/State'] = estimate.state if estimate else 'apparent'
+    result['/Tic/Status/State'] = published.state
     if estimate:
-        result.update({'/Tic/Estimator/Factor': estimate.factor,
+        result.update({'/Tic/Estimator/Factor': published.factor,
                        '/Tic/Estimator/EnergyMeanW': estimate.energy_mean_watts,
                        '/Tic/Estimator/WindowSeconds': estimate.window_seconds,
                        '/Tic/Estimator/WindowWh': estimate.window_wh,

@@ -19,7 +19,10 @@ sans incorporation du code du firmware. Ce n'est pas une reproduction
 numérique exacte du filtre F1ATB. Différences : fenêtre glissante hybride Wh/temps,
 intégration temporelle des VA, filtre indépendant de la cadence des trames,
 apprentissage initial explicite, remise à zéro sur défaut ou changement de
-sens. Aucun repli automatique en « VA = W » ne masque un apprentissage absent.
+sens. Le cœur de l’estimateur signale explicitement un apprentissage absent.
+Le mode D-Bus peut publier une estimation provisoire avec le dernier coefficient
+du même sens, ou 1 à défaut, sans modifier cet apprentissage ; les indicateurs
+de disponibilité et de calibration sont séparés. Voir [le guide D-Bus](gx-dbus.md).
 
 ## Calcul et délai
 

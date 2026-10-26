@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0a2 — 2026-10-26
+
+- Native D-Bus provisional power during initial/reversal warm-up: reuse the last
+  learned coefficient for the same direction, or 1 if unknown.
+- Separate availability, provisional/calibrated flags and factor-source diagnostics.
+- Fresh validated TIC remains mandatory; measured power-factor fields stay invalid.
+- Optional strict warm-up behavior via `warmup_fallback: false`; Modbus unchanged.
+- 70 automated tests, including both reversal directions, recovery and expiration.
+
 ## 0.4.0a1 — 2026-10-26
 
 - Native Venus OS D-Bus grid meter with direct TIC USB acquisition.

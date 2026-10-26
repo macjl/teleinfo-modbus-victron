@@ -11,10 +11,11 @@ import unittest
 
 from teleinfo_modbus_victron.config import Config
 from teleinfo_modbus_victron.dbus_app import SourceWorker
-from teleinfo_modbus_victron.dbus_model import DBusConfig, EXTRA_FIELDS, NATIVE_PATHS, load_dbus_config, render
+from teleinfo_modbus_victron.dbus_model import DBusConfig, EXTRA_FIELDS, NATIVE_PATHS, PowerFallback, load_dbus_config, render
 from teleinfo_modbus_victron.model import MeasurementStore, normalize
 from teleinfo_modbus_victron.tic import Group, parse_frame
 from tests.helpers import frame, snapshot
+from tests.test_power import Trace
 
 
 class DBusModelTests(unittest.TestCase):
@@ -104,6 +105,99 @@ class DBusModelTests(unittest.TestCase):
         self.assertIsNone(values['/Ac/Power'])
         self.assertIsNotNone(values['/Ac/Energy/Forward'])
 
+    def test_reversals_publish_unity_then_cached_factors_per_direction(self):
+        trace = Trace()
+        fallback = PowerFallback()
+
+        def sample(watts, va):
+            snapshot = trace.sample(watts, va)
+            values = render(trace.store, fallback)
+            self.assertEqual(values['/Tic/Status/PowerValid'], 1)
+            self.assertEqual(values['/Ac/Power'], values['/Ac/L1/Power'])
+            self.assertEqual(values['/Ac/Energy/Forward'], snapshot.energy_import_wh / 1000)
+            self.assertEqual(values['/Ac/Energy/Reverse'], snapshot.energy_export_wh / 1000)
+            self.assertIsNone(values['/Ac/PowerFactor'])
+            self.assertIsNone(values['/Ac/L1/PowerFactor'])
+            return values
+
+        initial = sample(300, 700)
+        self.assertEqual(initial['/Ac/Power'], 700)
+        self.assertEqual(initial['/Tic/Estimator/Factor'], 1)
+        self.assertEqual(initial['/Tic/Status/State'], 'warming_up_unity')
+        self.assertEqual(initial['/Tic/Status/PowerProvisional'], 1)
+        self.assertEqual(initial['/Tic/Status/PowerCalibrated'], 0)
+        self.assertIsNone(trace.store.fresh().estimated_power)  # Estimator/Modbus stay independent.
+        for _ in range(96):
+            learned_import = sample(300, 700)
+        self.assertAlmostEqual(learned_import['/Ac/Power'], 300, delta=20)
+        self.assertEqual(learned_import['/Tic/Status/PowerProvisional'], 0)
+        self.assertEqual(learned_import['/Tic/Status/PowerCalibrated'], 1)
+        first_export = sample(-400, 550)
+        self.assertEqual(first_export['/Ac/Power'], -550)  # Never borrow import's factor.
+        self.assertEqual(first_export['/Tic/Estimator/FactorSource'], 'unity')
+        for _ in range(96):
+            learned_export = sample(-400, 550)
+        self.assertAlmostEqual(learned_export['/Ac/Power'], -400, delta=20)
+        next_import = sample(300, 700)
+        self.assertEqual(next_import['/Tic/Status/State'], 'warming_up_cached')
+        self.assertEqual(next_import['/Tic/Estimator/FactorSource'], 'cached')
+        self.assertAlmostEqual(next_import['/Ac/Power'], learned_import['/Ac/Power'], delta=1)
+        next_export = sample(-400, 550)
+        self.assertAlmostEqual(next_export['/Ac/Power'], learned_export['/Ac/Power'], delta=1)
+        self.assertEqual(next_export['/Tic/Status/PowerProvisional'], 1)
+
+    def test_fallback_never_publishes_without_a_fresh_valid_tic_frame(self):
+        for fault in ('expiry', 'checksum', 'disconnect'):
+            with self.subTest(fault=fault):
+                trace, fallback = Trace(), PowerFallback()
+                for _ in range(96):
+                    trace.sample(300, 700)
+                    render(trace.store, fallback)
+                if fault == 'expiry':
+                    trace.now += trace.config.stale_after
+                elif fault == 'checksum':
+                    trace.store.reject('invalid TIC frame/checksum')
+                else:
+                    trace.store.invalidate('serial disconnected')
+                invalid = render(trace.store, fallback)
+                for path in NATIVE_PATHS:
+                    self.assertIsNone(invalid[path])
+                self.assertEqual(invalid['/Connected'], 0)
+                self.assertEqual(invalid['/Tic/Status/PowerValid'], 0)
+                self.assertEqual(invalid['/Tic/Status/PowerProvisional'], 0)
+                self.assertIsNone(invalid['/Tic/Estimator/Factor'])
+                trace.sample(300, 700)
+                fresh = render(trace.store, fallback)
+                self.assertEqual(fresh['/Connected'], 1)
+                self.assertEqual(fresh['/Tic/Status/PowerProvisional'], 1)
+                self.assertEqual(fresh['/Tic/Estimator/FactorSource'], 'cached')
+
+    def test_fallback_can_be_disabled_and_zero_needs_no_provisional_factor(self):
+        trace, fallback = Trace(), PowerFallback(enabled=False)
+        trace.sample(300, 700)
+        self.assertIsNone(render(trace.store, fallback)['/Ac/Power'])
+        trace.sample(0, 0)
+        zero = render(trace.store, PowerFallback())
+        self.assertEqual(zero['/Ac/Power'], 0)
+        self.assertEqual(zero['/Tic/Status/PowerProvisional'], 0)
+        self.assertEqual(zero['/Tic/Status/PowerValid'], 1)
+
+    def test_energy_limited_bound_does_not_replace_a_learned_coefficient(self):
+        trace, fallback = Trace(), PowerFallback()
+        for _ in range(120):
+            trace.sample(400, 700)
+            render(trace.store, fallback)
+        learned = fallback.learned_factors[1]
+        for _ in range(192):
+            trace.sample(0, 700)
+            render(trace.store, fallback)
+        self.assertEqual(trace.store.fresh().power_estimate.state, 'energy_limited')
+        self.assertEqual(fallback.learned_factors[1], learned)
+        trace.sample(-400, 550)
+        render(trace.store, fallback)
+        trace.sample(400, 700)
+        self.assertAlmostEqual(render(trace.store, fallback)['/Ac/Power'], learned * 700)
+
 
 class DBusConfigurationTests(unittest.TestCase):
     def test_json_and_strict_separation_from_modbus_configuration(self):
@@ -111,8 +205,9 @@ class DBusConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg.service_name, 'com.victronenergy.grid.linky_tic')
         self.assertEqual(cfg.source_config().power_min_wh, 2)
         self.assertEqual(cfg.source_config().power_min_seconds, 15)
+        self.assertTrue(cfg.warmup_fallback)
         for changes in ({'identity': 'bad/name'}, {'instance': True}, {'instance': 1000},
-                        {'device': 'ttyUSB0'}, {'claim_serial': 'true'},
+                        {'device': 'ttyUSB0'}, {'claim_serial': 'true'}, {'warmup_fallback': 'true'},
                         {'measurement': {'port': 502}}, {'measurement': {'stale_after': 0}}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 DBusConfig(**({'device': '/dev/test'} | changes))

@@ -22,6 +22,39 @@ Le pilote ne déclare pas la puissance active comme mesurée. Il conserve
 [l’estimateur adaptatif](power-estimator.md), avec 10 Wh OU 60 s comme cible,
 et 15 s ET 2 Wh minimum. Aucun gain de précision active ne découle du transport.
 
+Avec `warmup_fallback: true` (défaut du mode D-Bus), les watts restent
+publiés pendant l’apprentissage initial et après une inversion de sens.
+Le pilote applique le **dernier coefficient appris dans ce même sens**,
+ou **1** si aucun coefficient n’est connu : `P_provisoire = signe × VA × facteur`.
+Les coefficients import/export sont distincts et conservés uniquement en mémoire,
+pas après redémarrage du processus. Les coefficients provisoires et les bornes
+`energy_limited` ne remplacent jamais un coefficient appris dans ce cache.
+
+Dès que l’estimateur dispose de nouvelles données suffisantes, sa valeur reprend
+automatiquement la main. Il continue d’apprendre selon les mêmes minimums.
+Les diagnostics distinguent disponibilité et calibration :
+
+| Chemin | Pendant le repli | Après apprentissage |
+| --- | --- | --- |
+| `/Tic/Status/PowerValid` | 1 : une estimation est publiée, sans garantie de précision | 1 |
+| `/Tic/Status/PowerProvisional` | 1 | 0 |
+| `/Tic/Status/PowerCalibrated` | 0 | 1 si un facteur a été appris |
+| `/Tic/Status/State` | `warming_up_cached` ou `warming_up_unity` | `tracking` ou `energy_limited` |
+| `/Tic/Estimator/FactorSource` | `cached` ou `unity` | `learned` ou `energy_limited` |
+
+Le zéro apparent est publié directement comme zéro, sans repli provisoire.
+Les facteurs précédents ne sont jamais réutilisés pour publier d’anciens watts :
+une **nouvelle TIC fraîche et valide** est toujours requise. Une interruption
+invalide la puissance et tous les autres champs physiques, même si un coefficient
+reste en mémoire. Au retour de trames valides, un coefficient conservé peut
+servir provisoirement pendant le nouvel apprentissage.
+
+Le repli peut surestimer la puissance active, notamment avec le facteur 1.
+Il ne constitue ni une mesure de cos phi, ni une qualification pour ESS.
+Les champs natifs `/Ac/PowerFactor` restent invalides. Régler
+`warmup_fallback: false` pour conserver des watts indisponibles pendant l’apprentissage.
+Le comportement des profils Modbus reste inchangé.
+
 Les chemins suivants constituent **notre API supplémentaire**, schéma 1,
 pas des champs natifs automatiquement affichés ou archivés par GX/VRM :
 

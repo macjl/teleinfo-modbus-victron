@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "teleinfo-modbus-victron"
-version = "0.4.0a1"
+version = "0.4.0a2"
 description = "Linky standard TIC to Victron GX via Modbus TCP or native D-Bus"
 readme = "README.md"
 requires-python = ">=3.11"

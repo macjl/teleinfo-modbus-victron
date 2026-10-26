@@ -14,7 +14,7 @@ Passerelle Python open source : TIC standard d’un Linky monophasé vers un
 **serveur Modbus TCP** émulant un **ABB B21**, ou un EM24 Ethernet en option.
 **Le GX est le client Modbus.** Aucun pilote supplémentaire sur GX, aucun MQTT.
 
-Version expérimentale **0.4.0a1**, destinée au monitoring. Serveur simulé,
+Version expérimentale **0.4.0a2**, destinée au monitoring. Serveur simulé,
 lecteur USB, checksum, cohérence, expiration, reconnexion, YAML/environnement,
 Docker et Prometheus facultatif sont implémentés. Les requêtes de découverte,
 d’initialisation et de lecture d’un GX réel (Raspberry Pi 4, Venus OS 3.85)
@@ -129,7 +129,8 @@ et l’[inventaire initial](docs/environment.md). La qualification ESS nécessit
 une mesure active fiable de référence et des essais de latence et de défaut.
 
 Le mode D-Bus réutilise le lecteur et l’estimateur sans charger les bibliothèques
-Modbus/YAML. Ses champs supplémentaires ne deviennent pas automatiquement
+Modbus/YAML. Pendant le réapprentissage, il publie des watts provisoires avec
+le dernier coefficient du même sens, ou 1 à défaut, depuis une TIC fraîche. Ses champs supplémentaires ne deviennent pas automatiquement
 des graphiques VRM. Voir [le guide D-Bus](docs/gx-dbus.md).
 
 Licence MIT. Projet indépendant de Victron Energy, ABB, Carlo Gavazzi et Enedis.

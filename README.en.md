@@ -9,7 +9,7 @@ or, optionally, a Carlo Gavazzi EM24 Ethernet.
 **The Victron GX is the Modbus client.** No custom driver needs to be installed
 on Venus OS. MQTT is not required.
 
-Version **0.4.0a1** adds a native GX D-Bus driver. It reads USB directly on GX,
+Version **0.4.0a2** adds a native GX D-Bus driver. It reads USB directly on GX,
 publishes native grid readings and separate custom TIC contract/tariff paths.
 See the [D-Bus installation guide, in French](docs/gx-dbus.md). Custom paths
 are not automatically displayed or archived by GX/VRM. The original
@@ -32,6 +32,10 @@ universal compatibility or ESS qualification. See the
 - This is an independent implementation inspired by the
   [F1ATB solar router](https://github.com/F1ATB/Solar-Router-F1ATB), not a copy
   of its firmware. See the [algorithm and limitations](docs/power-estimator.md).
+- Native D-Bus keeps publishing provisional W during warm-up using the last
+  learned factor for the same direction, or 1 if unknown. Explicit diagnostics
+  identify this fallback; it requires fresh, valid TIC. It can be disabled with
+  `warmup_fallback: false`. Modbus behavior remains unchanged.
 - **ESS control and native Victron solar charging control are not qualified.**
 - Import/export energy comes from measured `EAST`/`EAIT` counters. ABB exposes
   10 Wh steps, versus 100 Wh for EM24. Export means energy injected into the
@@ -119,7 +123,7 @@ and disabled by default. `.env` and `*.local.*` files are excluded from Git.
 .venv/bin/python tools/check_upstream.py
 ```
 
-The 66 tests cover both wire maps, TCP operations, parsing, freshness,
+The 70 tests cover both wire maps, TCP operations, parsing, freshness,
 reconnection, estimation and metrics. The upstream audit verifies pinned
 Victron sources and official register decoders; it needs internet access
 unless `--source-dir` points to a matching local checkout.

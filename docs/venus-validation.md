@@ -1,5 +1,32 @@
 # Validation de la passerelle et de Venus OS
 
+## Repli provisoire D-Bus 0.4.0a2
+
+La version 0.4.0a2 ajoute un repli configurable pendant l’apprentissage :
+dernier facteur appris dans le même sens, ou 1 si inconnu, appliqué uniquement
+aux VA d’une TIC fraîche. Le cœur de l’estimateur et les profils Modbus restent
+inchangés. Les coefficients sont conservés en mémoire du processus, séparément
+pour import et export ; les watts précédents ne sont jamais conservés comme
+mesure de substitution.
+
+Les **70 tests** couvrent les deux sens de transition, le retour aux facteurs
+appris, la réutilisation du bon coefficient et les défauts. Un essai sur un
+bus D-Bus isolé du GX, avec sa bibliothèque réelle et des données synthétiques,
+a également vérifié ces transitions et l’expiration vers des valeurs invalides.
+
+Le repli a été activé sur la TIC réelle. Un premier relevé de **50 s** a compté
+**183 observations fraîches**, toutes avec une puissance publiée. Le statut
+`warming_up_unity` et les indicateurs provisoire/calibré ont été lus. La
+calibration était encore en attente en fin de ce relevé ; les inversions et
+la faible énergie échangée peuvent prolonger ce régime. La disponibilité
+continue ne constitue pas une validation de précision des watts provisoires.
+
+Le pilote a ensuite retrouvé l’état `tracking` avec le marqueur provisoire à 0.
+Un relevé complémentaire de **45 s**, comprenant **139 observations fraîches**,
+a confirmé une puissance toujours disponible après reprise de la calibration.
+Ce second relevé ne comportait pas d’inversion réelle ; les deux sens et les
+coefficients en cache ont été vérifiés sur le bus isolé et dans les tests.
+
 ## Pilote D-Bus natif 0.4.0a1
 
 Le 26 octobre 2026, le pilote a été installé sur le même Raspberry Pi 4 sous

@@ -5,6 +5,7 @@
   "serial": "LINKYTIC000001",
   "custom_name": "Linky TIC — estimation",
   "claim_serial": true,
+  "warmup_fallback": true,
   "measurement": {
     "stale_after": 5.0,
     "power_method": "adaptive",

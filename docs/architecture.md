@@ -35,7 +35,11 @@ Voir [l’installation D-Bus et son API](gx-dbus.md).
   pour sa configuration uniquement. Protection des mesures, des unités et FC23.
 - `config.py` : paramètres typés, YAML puis variables `TIC_EM24_*` prioritaires,
   refus des clés inconnues et obligation d’accepter le mode d’estimation.
-- `metrics.py` : Prometheus facultatif, validité et âge de source, compteurs,
+- `dbus_model.py` : rendu des chemins réseau natifs et TIC, repli de puissance
+  par sens, limites PowerGuard et invalidation depuis un instantané frais.
+- `dbus_app.py` : acquisition dans un thread séparé, publication D-Bus par lots
+  sur GLib, identité persistante et supervision du lecteur.
+- `metrics.py` : Prometheus facultatif du mode Linux/Modbus, validité et âge de source, compteurs,
   omission des mesures expirées. Les valeurs estimées sont nommées comme telles.
 - `app.py` : démarrage, signaux, arrêt coordonné. Une exception fatale de source
   termine le service au lieu de laisser un serveur sans acquisition.
@@ -64,15 +68,17 @@ une recréation du conteneur si son numéro de périphérique a changé.
 ## Limites et suite
 
 La puissance TIC utilise désormais un facteur W/VA adaptatif appris depuis les Wh.
-Sans apprentissage disponible, le bloc de lecture GX retourne 04. L’ancienne
+Sans apprentissage disponible, le bloc Modbus de lecture GX retourne 04. Le mode
+D-Bus peut publier un repli provisoire avec le dernier facteur du même sens ou 1,
+uniquement depuis une TIC fraîche, avec des indicateurs de qualité distincts. L’ancienne
 approximation reste sélectionnable avec `power_method: apparent`. La simulation
 fournit directement sa puissance. La fréquence est nominale/configurée.
 Les index d’énergie sont mesurés par le Linky mais
 exposés avec une résolution de 10 Wh en ABB, ou 100 Wh en EM24. CCASN/CCAIN ne sont pas utilisés
 comme mesure instantanée. Le profil est strictement monophasé.
 
-Les tests couvrent le TCP, l’estimateur et les défauts simulés.
-Le matériel réel et le début du parcours GX ont été éprouvés ; voir
+Les tests couvrent le TCP, le rendu D-Bus, l’estimateur et les défauts simulés.
+Le matériel réel et le pilote D-Bus sur plusieurs jours ont été éprouvés ; voir
 [le rapport de validation](venus-validation.md). Restent la validation visuelle
 VRM, les pertes/reprises réelles de bout en bout et la qualification ESS.
 La détection EM24 initiale, puis celle de l’ABB avec l’énergie inversée L1

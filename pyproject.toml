@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "teleinfo-modbus-victron"
-version = "0.4.0a3"
+version = "0.4.0b1"
 description = "Linky standard TIC to Victron GX via Modbus TCP or native D-Bus"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = ["pymodbus==3.16.1", "pyserial==3.5", "PyYAML==6.0.3"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
   "Operating System :: POSIX :: Linux",
 ]

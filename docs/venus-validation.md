@@ -1,5 +1,30 @@
 # Validation de la passerelle et de Venus OS
 
+## Suivi sur plusieurs jours — publication 0.4.0b1
+
+Le **29 octobre 2026**, l’utilisateur confirme le bon fonctionnement du pilote
+TIC natif depuis plusieurs jours. Une vérification SSH en lecture seule relève
+le même processus en fonctionnement depuis **plus de 77 heures**, sous Venus
+OS **3.85** sur Raspberry Pi 4. Le runtime déployé est toujours **0.4.0a3** et
+son empreinte correspond au code testé le 26 octobre.
+
+Lors de cette vérification, la source est connectée et fraîche, la puissance
+estimée est disponible, l’estimateur est en `tracking`, le marqueur provisoire
+est à 0 et la publication PowerGuard est active. Il s’agit d’un constat ponctuel
+ajouté au retour utilisateur, pas d’un enregistrement exhaustif de chaque trame
+pendant ces 77 heures ni d’une validation de précision active.
+
+La version **0.4.0b1** publie ce comportement avec une documentation revue et
+une archive contenant l’installateur GX. Le changement de version ne déploie
+pas de mise à jour sur le GX de référence. Le code fonctionnel du pilote reste
+celui de 0.4.0a3 ; seul son numéro de version change.
+
+Le statut reste **bêta pour le monitoring monophasé**. Les essais documentés
+ci-dessous ne qualifient ni ESS, ni la transmission automatique des limites
+PowerGuard à EVCS, ni toutes les combinaisons de matériel et de firmware.
+Le redémarrage complet du GX et le cycle physique de déconnexion USB restent
+des points distincts à vérifier.
+
 ## Limites PowerGuard D-Bus 0.4.0a3
 
 Le 26 octobre 2026, la version 0.4.0a3 a été installée sur le GX de référence

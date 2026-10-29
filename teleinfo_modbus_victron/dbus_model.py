@@ -6,7 +6,7 @@ import re
 
 from .config import Config
 
-VERSION = "0.4.0a3"
+VERSION = "0.4.0b1"
 
 
 @dataclass(frozen=True)

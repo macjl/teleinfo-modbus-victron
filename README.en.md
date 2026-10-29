@@ -2,21 +2,27 @@
 
 [Documentation en français](README.md)
 
-Python gateway from a French single-phase Linky meter's **standard TIC USB
-interface** to a **Modbus TCP server**, emulating an **ABB B21** energy meter
-or, optionally, a Carlo Gavazzi EM24 Ethernet.
+Open source Python integration exposing a French single-phase Linky meter's
+**standard TIC USB interface** as a Victron GX grid meter.
 
-**The Victron GX is the Modbus client.** No custom driver needs to be installed
-on Venus OS. MQTT is not required.
+| Mode | USB connection | Operation | Guide |
+| --- | --- | --- | --- |
+| **Native D-Bus** | Directly on GX | Local driver, grid readings and extra TIC data | [GX installation](docs/gx-dbus.en.md) |
+| **Modbus TCP** | Separate Linux host | ABB B21 or EM24 server emulation; GX is the client | [Debian / Docker](docs/deployment-debian.md) |
 
-Version **0.4.0a3** includes a native GX D-Bus driver. It reads USB directly on GX,
-publishes native grid readings and separate custom TIC contract/tariff paths.
-See the [D-Bus installation guide, in French](docs/gx-dbus.md). PowerGuard
-consumption limits use PCOUP and live voltage; native forwarding to EVCS and
-actual charge limitation remain unverified. Custom TIC paths are not
-automatically displayed or archived by GX/VRM. The original
-[v0.3.0a1 Modbus release](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
-remains available. Both modes are experimental monitoring integrations. Native discovery
+**[Version 0.4.0b1](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.4.0b1)**
+is the first native D-Bus beta release, intended for **monitoring**. Several days
+of operation have been confirmed on a Raspberry Pi 4 running Venus OS **3.85**.
+This is evidence from one installation. No existing Victron driver is patched.
+The native driver exposes import/export energy in both Total and L1 paths,
+with **1 Wh** steps, plus separate contract, tariff and diagnostic paths.
+Custom TIC paths are not automatically displayed or archived by GX/VRM.
+PowerGuard consumption limits use PCOUP and live voltage; native forwarding
+to EVCS and actual charge limitation remain unverified.
+
+Both modes operate without MQTT. The Modbus gateway retains the original
+[v0.3.0a1 profiles](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
+and needs no additional GX driver. Native Modbus discovery
 and displayed readings have been confirmed on a Raspberry Pi 4 running
 **Venus OS 3.85**, first with EM24 and then with ABB B21. The ABB profile also
 displays reverse energy on L1. This is validation on one installation, not
@@ -42,13 +48,14 @@ universal compatibility or ESS qualification. See the
 - Import/export energy comes from measured `EAST`/`EAIT` counters. ABB exposes
   10 Wh steps, versus 100 Wh for EM24. Export means energy injected into the
   grid, not total PV generation.
-- Frequency is configured, not measured. Instantaneous power factor is
-  unavailable in the ABB profile.
+- Modbus frequency is configured, not measured; native D-Bus frequency stays
+  unavailable. Instantaneous power factor is unavailable in both the ABB
+  profile and the native D-Bus driver.
 - The server rejects stale measurements with Modbus exception 04; Venus OS may
   temporarily retain its own cached display. End-to-end fault timing still
   needs validation.
 
-## Quick start with simulated data
+## Modbus quick start with simulated data
 
 Requires Linux and Python 3.11 or newer:
 
@@ -125,8 +132,9 @@ and disabled by default. `.env` and `*.local.*` files are excluded from Git.
 .venv/bin/python tools/check_upstream.py
 ```
 
-The 70 tests cover both wire maps, TCP operations, parsing, freshness,
-reconnection, estimation and metrics. The upstream audit verifies pinned
+The 74 tests cover both wire maps, TCP operations, parsing, freshness,
+reconnection, estimation, metrics, native D-Bus rendering and PowerGuard limits.
+The upstream audit verifies pinned
 Victron sources and official register decoders; it needs internet access
 unless `--source-dir` points to a matching local checkout.
 

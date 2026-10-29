@@ -1,5 +1,7 @@
 # Pilote Linky TIC natif sur Venus OS
 
+[English installation guide](gx-dbus.en.md)
+
 Le mode D-Bus lit l’adaptateur USB directement sur le GX. Il publie
 `com.victronenergy.grid.linky_tic`, sans émuler un ABB ou un EM24 et sans
 serveur Modbus. La passerelle Modbus de la version `v0.3.0a1` reste disponible
@@ -140,11 +142,39 @@ n’est pas un archivage : un historique et un tableau de bord nécessitent une
 configuration explicite. La prise en charge des chemins personnalisés via MQTT
 ou VRM n’est pas présumée.
 
+L’export Prometheus facultatif du projet concerne le mode Linux/Modbus.
+L’installateur GX natif n’installe pas d’exporter Prometheus du système Victron.
+
 ## Installation sur le GX
 
-Installer depuis un checkout ou une archive contenant `tools`, `deploy/gx`,
-le paquet Python et `config.dbus.example.json`. Copier ces fichiers sur le GX
-et exécuter les commandes par SSH en root. Ne pas lancer de second lecteur USB.
+La version **0.4.0b1** est une bêta de monitoring. Le code du pilote déployé
+depuis plusieurs jours sur l’installation de référence est conservé, avec un
+nouveau numéro de version. L’ESS et la régulation EVCS restent non qualifiés.
+
+Préparer un accès SSH root au GX et connecter l’adaptateur USB TIC en mode
+standard. Le pilote est monophasé et attend `VTIC=02`, `URMS1`, `IRMS1`,
+`SINSTS`, `SINSTI`, `EAST` et `EAIT`. Les informations d’injection absentes
+ne sont pas remplacées par zéro. Ne pas lancer de second lecteur USB.
+
+Télécharger l’archive de la version et son empreinte sur le GX :
+
+```sh
+cd /tmp
+wget -O teleinfo-modbus-victron-0.4.0b1.tar.gz \
+  https://github.com/macjl/teleinfo-modbus-victron/releases/download/v0.4.0b1/teleinfo-modbus-victron-0.4.0b1.tar.gz
+wget -O SHA256SUMS \
+  https://github.com/macjl/teleinfo-modbus-victron/releases/download/v0.4.0b1/SHA256SUMS
+sha256sum -c SHA256SUMS
+tar -xzf teleinfo-modbus-victron-0.4.0b1.tar.gz
+cd teleinfo-modbus-victron-0.4.0b1
+```
+
+L’archive contient le code, `tools/install_gx.py`, `deploy/gx`, la configuration
+JSON d’exemple et la documentation. On peut aussi la télécharger sur un autre
+ordinateur puis la copier sur le GX. Le mode natif s’installe avec cet
+installateur, sans utiliser `pip` sur Venus OS.
+
+Identifier le chemin USB réel et préparer le service arrêté :
 
 ```sh
 ls -l /dev/serial/by-id/

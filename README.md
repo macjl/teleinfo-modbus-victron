@@ -2,22 +2,33 @@
 
 [English documentation](README.en.md) · [Contribuer](CONTRIBUTING.md) · [Versions](CHANGELOG.md)
 
-Deux modes sont disponibles :
+Pilote Python open source pour utiliser la **TIC standard d’un Linky monophasé**
+comme compteur réseau Victron GX. Deux modes sont disponibles :
 
-- **D-Bus natif sur GX**, avec USB directement connecté au GX et données TIC
-  supplémentaires : [installation et champs publiés](docs/gx-dbus.md).
-- **Passerelle Modbus TCP sur Linux**, décrite ci-dessous ; la version
-  [v0.3.0a1](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1)
-  conserve le premier état publié.
+| Mode | Branchement USB | Fonctionnement | Guide |
+| --- | --- | --- | --- |
+| **D-Bus natif** | Directement sur le GX | Pilote local, mesures réseau et données TIC supplémentaires | [Installation GX](docs/gx-dbus.md#installation-sur-le-gx) |
+| **Modbus TCP** | Sur un hôte Linux séparé | Serveur ABB B21 ou EM24 émulé ; le GX est client | [Debian / Docker](docs/deployment-debian.md) |
 
-Passerelle Python open source : TIC standard d’un Linky monophasé vers un
-**serveur Modbus TCP** émulant un **ABB B21**, ou un EM24 Ethernet en option.
-**Le GX est le client Modbus.** Aucun pilote supplémentaire sur GX, aucun MQTT.
+**[Version 0.4.0b1](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.4.0b1)** :
+première version bêta du pilote D-Bus natif, destinée au **monitoring**.
+Le fonctionnement sur plusieurs jours a été confirmé sur un Raspberry Pi 4
+sous Venus OS **3.85**, sans modification des pilotes Victron existants.
+Le retour terrain concerne une installation ; voir le
+[rapport de validation](docs/venus-validation.md#suivi-sur-plusieurs-jours--publication-040b1).
 
-Version expérimentale **0.4.0a3**, destinée au monitoring. Le mode D-Bus publie
-aussi des [limites PowerGuard dynamiques](docs/gx-dbus.md#limites-powerguard-issues-du-contrat)
-depuis `PCOUP` et la tension mesurée ; leur utilisation effective par la borne
-EV reste à vérifier. Serveur simulé,
+Le mode D-Bus expose les énergies importées et injectées **au total et sur L1**,
+avec un pas de **1 Wh**, les mesures électriques et les données de contrat,
+tarif et diagnostic dans des [chemins supplémentaires](docs/gx-dbus.md).
+Il publie aussi des [limites PowerGuard dynamiques](docs/gx-dbus.md#limites-powerguard-issues-du-contrat)
+depuis `PCOUP` et la tension mesurée. **La puissance active reste estimée ;
+l’ESS et la limitation automatique de la borne EV restent non qualifiés.**
+Les données supplémentaires ne sont pas automatiquement affichées ou archivées par GX/VRM.
+
+Le mode Modbus, décrit ci-dessous, conserve les profils ABB B21 et EM24 de
+la [version 0.3.0a1](https://github.com/macjl/teleinfo-modbus-victron/releases/tag/v0.3.0a1).
+Il fonctionne avec les pilotes Victron existants, sans ajout de pilote sur le GX.
+Les deux modes fonctionnent sans MQTT. Serveur simulé,
 lecteur USB, checksum, cohérence, expiration, reconnexion, YAML/environnement,
 Docker et Prometheus facultatif sont implémentés. Les requêtes de découverte,
 d’initialisation et de lecture d’un GX réel (Raspberry Pi 4, Venus OS 3.85)
@@ -47,7 +58,7 @@ VA ≈ W ne permet donc pas un monitoring actif précis sur cette installation ;
 c’est l’ancienne méthode, désormais remplacée par l’estimation adaptative.
 Voir le [diagnostic de précision](docs/power-accuracy.md).
 
-## Démarrage natif avec simulation
+## Démarrage Modbus avec simulation
 
 Python 3.11 ou ultérieur, sous Linux :
 
@@ -70,7 +81,7 @@ Ce probe est un **client de diagnostic séparé** ; la passerelle reste serveur.
 Il détecte le profil et lit les blocs du pilote GX. Utiliser `--profile abb_b21`
 ou `--profile em24` pour choisir explicitement.
 
-## Linky réel et GX
+## Modbus : Linky réel et GX
 
 Voir [le déploiement Debian et Docker](docs/deployment-debian.md) pour
 l’identification du périphérique, les droits série et l’exposition sur TCP/502.
@@ -82,7 +93,7 @@ Vérifier le rôle **Grid / Réseau**
 et le monophasé L1. Le serveur Modbus du GX est une fonction distincte de
 son client. Voir [les réglages GX](docs/gx-setup.md).
 
-## Données et défauts
+## Modbus : données et défauts
 
 - Champs requis : `VTIC=02`, `URMS1`, `IRMS1`, `SINSTS`, `SINSTI`, `EAST`, `EAIT`.
   Un champ d’injection absent ne devient pas implicitement zéro.
@@ -108,7 +119,9 @@ son client. Voir [les réglages GX](docs/gx-setup.md).
 
 ## Configuration et tests
 
-Partir de [config.example.yaml](config.example.yaml). Les variables
+Le mode D-Bus utilise [config.dbus.example.json](config.dbus.example.json),
+avec les bibliothèques Python du firmware et son installateur dédié.
+Pour Modbus, partir de [config.example.yaml](config.example.yaml). Les variables
 `TIC_EM24_<NOM_DU_PARAMÈTRE>` remplacent les valeurs YAML, par exemple
 `TIC_EM24_SOURCE=tic` ou `TIC_EM24_ALLOW_ESTIMATED_POWER=true`.
 Un paramètre inconnu ou invalide empêche le démarrage.

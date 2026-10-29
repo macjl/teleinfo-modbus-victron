@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0b1 — 2026-10-29
+
+First native Venus OS D-Bus beta release, incorporating the 0.4.0a1–a3 driver.
+
+- Direct GX USB acquisition, native Total/L1 import/export counters at 1 Wh
+  resolution, extra TIC contract/tariff/status data and freshness diagnostics.
+- Per-direction provisional power during learning and dynamic PowerGuard
+  consumption limits derived from current-frame PCOUP and measured voltage.
+- Confirmed multi-day operation on the reference Raspberry Pi 4 / Venus OS 3.85
+  installation; active power remains estimated and ESS/EVCS regulation unqualified.
+- French and English native installation guides, a versioned source archive
+  containing the GX installer, and SHA-256 checksums for the release asset.
+- 74 automated tests; ABB B21 / EM24 Modbus modes retained.
+
+The runtime behavior is unchanged from the deployed 0.4.0a3 driver; this release
+updates the version and community documentation. It does not update the running GX.
+
 ## 0.4.0a3 — 2026-10-26
 
 - Native D-Bus PowerGuard consumption limits derived from current-frame PCOUP:
